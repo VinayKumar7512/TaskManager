@@ -16,7 +16,7 @@ export const createTask = async (req, res) => {
     // Ensure isTrashed is false for new tasks
     const taskData = {
       ...req.body,
-      user: req.user._id || req.user.userId,
+      user: req.user._id,
       isTrashed: false
     };
 
@@ -32,17 +32,10 @@ export const createTask = async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const taskDueDate = new Date(task.dueDate);
-    taskDueDate.setHours(0, 0, 0, 0);
-    
-    console.log('Task due date:', taskDueDate);
-    console.log('Today:', today);
-    console.log('Tomorrow:', tomorrow);
-    
-    if (taskDueDate.getTime() === today.getTime()) {
-      console.log('Task is due today, creating notification');
+    if (taskDueDate >= today && taskDueDate < tomorrow) {
       // Create notification for task due today
       await Notice.create({
-        user: req.user._id || req.user.userId,
+        user: req.user._id,
         message: `Task "${task.title}" is due today!`,
         read: false,
         task: task._id,

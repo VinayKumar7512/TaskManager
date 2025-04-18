@@ -65,9 +65,6 @@ const NotificationPanel = () => {
 
   useEffect(() => {
     fetchNotifications();
-    // Set up a timer to refresh notifications every minute
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchNotifications = async () => {
@@ -78,12 +75,10 @@ const NotificationPanel = () => {
         return;
       }
 
-      console.log('Fetching notifications...');
       const response = await axios.get('http://localhost:5001/api/users/notifications', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('Notifications received:', response.data);
       setNotifications(response.data || []);
       setLoading(false);
     } catch (error) {

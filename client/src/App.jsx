@@ -28,7 +28,7 @@ const RequireAuth = ({ children }) => {
   const location = useLocation();
 
   if (!user) {
-    return <Navigate to="/log-in" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;
@@ -58,7 +58,7 @@ const PublicRoute = ({ children }) => {
   const location = useLocation();
 
   if (user) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+    return <Navigate to="/dashboard" state={{ from: location }} replace />;
   }
 
   return children;
@@ -76,12 +76,23 @@ function App() {
     <div className="min-h-screen bg-gray-100 dark:bg-dark">
       <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
+        {/* Default route - redirect to dashboard if logged in, otherwise to login */}
+        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
+
         {/* Public routes */}
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-        <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+        <Route path="/login" element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        } />
+        <Route path="/register" element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        } />
 
         {/* Protected routes */}
-        <Route path="/" element={
+        <Route path="/dashboard" element={
           <RequireAuth>
             <Layout>
               <Dashboard />
@@ -155,7 +166,7 @@ function App() {
 
         {/* Catch all route */}
         <Route path="*" element={
-          <Navigate to={user ? "/" : "/login"} replace />
+          <Navigate to={user ? "/dashboard" : "/"} replace />
         } />
       </Routes>
     </div>

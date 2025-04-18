@@ -6,34 +6,29 @@ import Button from "../components/button";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { FaUserCircle, FaUserPlus } from "react-icons/fa";
-import { loginUser, registerUser, clearError } from "../redux/slices/authSlice";
-import axios from "axios";
+import { FaUserCircle } from "react-icons/fa";
+import { loginUser, clearError } from "../redux/slices/authSlice";
+import "../styles/animations.css";
 
 const Login = () => {
   const { user, error: authError, status } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
   const [error, setError] = useState(null);
   
   const {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
     watch
   } = useForm();
 
-  // Clear errors when switching tabs
+  // Clear errors when component mounts
   useEffect(() => {
     setError(null);
     dispatch(clearError());
-  }, [activeTab, dispatch]);
-
-  // Watch email field for validation
-  const email = watch("email");
+  }, [dispatch]);
 
   const submitHandler = async (data) => {
     setIsLoading(true);
@@ -41,84 +36,37 @@ const Login = () => {
     dispatch(clearError());
 
     try {
-      if (activeTab === 'login') {
-        // Handle login
-        const result = await dispatch(loginUser(data)).unwrap();
-        if (result) {
-          toast.success("Login successful!");
-          navigate("/");
-        }
-      } else {
-        // Handle registration
-        const result = await dispatch(registerUser(data)).unwrap();
-        if (result) {
-          toast.success("Registration successful!");
-          setActiveTab('login');
-          reset();
-        }
+      const result = await dispatch(loginUser(data)).unwrap();
+      if (result) {
+        toast.success("Login successful!");
+        navigate("/dashboard");
       }
     } catch (err) {
-      // Check if the error is from the server
-      if (err.message) {
-        if (err.message.includes("Invalid email or password")) {
-          // Check if the email exists
-          try {
-            const response = await axios.post(
-              `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/check-email`,
-              { email }
-            );
-            if (!response.data.exists) {
-              setError("Email not found. Please check your email or register.");
-            } else {
-              setError("Incorrect password. Please try again.");
-            }
-          } catch (checkErr) {
-            setError("An error occurred while checking your email. Please try again.");
-          }
-        } else if (err.message.includes("deactivated")) {
-          setError("Your account has been deactivated. Please contact the administrator.");
-        } else {
-          setError(err.message);
-        }
-      } else {
-        setError("An error occurred during login. Please try again.");
-      }
+      setError(err.message || "An error occurred during login");
       toast.error(err.message || "Authentication failed");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Helper function to check if email exists
-  const checkEmailExists = async (email) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/check-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-      
-      const data = await response.json();
-      return data.exists;
-    } catch (error) {
-      console.error('Error checking email:', error);
-      return false;
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between p-4 md:p-8 gap-8">
-        {/* left side */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-100 mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-purple-100 mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-pink-100 mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+      </div>
+
+      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between p-4 md:p-8 gap-8 relative z-10">
+        {/* Left side - Task Manager Info */}
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full md:w-2/3 flex flex-col gap-y-8"
         >
-          <div className="flex flex-col gap-y-4">
+          <div className="flex flex-col gap-y-4 backdrop-blur-sm bg-white/30 p-8 rounded-2xl">
             <h1 className="text-4xl md:text-5xl font-bold text-blue-600">
               Welcome to Task Manager
             </h1>
@@ -126,35 +74,77 @@ const Login = () => {
               A simple and efficient way to manage your tasks and stay organized.
             </p>
           </div>
+
+          {/* Feature Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div className="flex items-start gap-4 backdrop-blur-sm bg-white/40 p-6 rounded-xl transition-all duration-300 hover:bg-white/60">
+              <div className="text-blue-600 bg-blue-100 p-3 rounded-lg">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Task Organization</h3>
+                <p className="text-gray-600">Create, organize, and track tasks with ease</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 backdrop-blur-sm bg-white/40 p-6 rounded-xl transition-all duration-300 hover:bg-white/60">
+              <div className="text-blue-600 bg-blue-100 p-3 rounded-lg">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Task Analytics</h3>
+                <p className="text-gray-600">Get insights and track your productivity</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 backdrop-blur-sm bg-white/40 p-6 rounded-xl transition-all duration-300 hover:bg-white/60">
+              <div className="text-blue-600 bg-blue-100 p-3 rounded-lg">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Progress Tracking</h3>
+                <p className="text-gray-600">Monitor task progress and deadlines</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 backdrop-blur-sm bg-white/40 p-6 rounded-xl transition-all duration-300 hover:bg-white/60">
+              <div className="text-blue-600 bg-blue-100 p-3 rounded-lg">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Priority Management</h3>
+                <p className="text-gray-600">Set and manage task priorities effectively</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-        {/* right side */}
+        {/* Right side - Login Form */}
         <motion.div 
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-full md:w-1/3 p-4 md:p-1 flex flex-col justify-center items-center"
+          className="w-full md:w-1/3 p-4 md:p-1 flex flex-col justify-center items-center relative z-10"
         >
-          <div className="w-full md:w-[400px] bg-white px-10 pt-14 pb-14 rounded-xl shadow-lg">
+          <div className="w-full md:w-[400px] bg-white/80 backdrop-blur-lg px-10 pt-14 pb-14 rounded-xl shadow-lg border border-white/20">
             {/* Tabs */}
             <div className="flex mb-8 border-b">
               <button
-                className={`flex-1 py-2 text-center font-medium ${
-                  activeTab === 'login'
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab('login')}
+                className="flex-1 py-2 text-center font-medium text-blue-600 border-b-2 border-blue-600"
               >
                 Sign In
               </button>
               <button
-                className={`flex-1 py-2 text-center font-medium ${
-                  activeTab === 'register'
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab('register')}
+                className="flex-1 py-2 text-center font-medium text-gray-500"
+                onClick={() => navigate('/register')}
               >
                 Sign Up
               </button>
@@ -164,20 +154,14 @@ const Login = () => {
               <div className="text-center">
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                    {activeTab === 'login' ? (
-                      <FaUserCircle className="text-blue-600 text-4xl" />
-                    ) : (
-                      <FaUserPlus className="text-blue-600 text-4xl" />
-                    )}
+                    <FaUserCircle className="text-blue-600 text-4xl" />
                   </div>
                 </div>
                 <p className="text-blue-600 text-3xl font-bold mb-2">
-                  {activeTab === 'login' ? 'Welcome back!' : 'Create Account'}
+                  Welcome back!
                 </p>
                 <p className="text-center text-base text-gray-600">
-                  {activeTab === 'login'
-                    ? "We're glad to see you again. Please login to your account."
-                    : "Fill in the details to create your account."}
+                  We're glad to see you again. Please login to your account.
                 </p>
               </div>
 
@@ -189,20 +173,6 @@ const Login = () => {
               )}
 
               <div className="flex flex-col gap-y-5">
-                {activeTab === 'register' && (
-                  <Textbox
-                    placeholder="Full Name"
-                    type="text"
-                    name="name"
-                    label="Full Name"
-                    className="w-full rounded-lg"
-                    register={register("name", {
-                      required: "Full name is required!",
-                    })}
-                    error={errors.name?.message}
-                  />
-                )}
-
                 <Textbox
                   placeholder="email@example.com"
                   type="email"
@@ -234,35 +204,11 @@ const Login = () => {
                   })}
                   error={errors.password?.message}
                 />
-
-                {activeTab === 'register' && (
-                  <>
-                    <Textbox
-                      placeholder="Role (e.g. Developer, Manager)"
-                      type="text"
-                      name="role"
-                      label="Role"
-                      className="w-full rounded-lg"
-                      register={register("role", {
-                        required: "Role is required!",
-                      })}
-                      error={errors.role?.message}
-                    />
-                  </>
-                )}
               </div>
 
               <Button
                 type="submit"
-                label={
-                  isLoading || status === 'loading'
-                    ? activeTab === 'login'
-                      ? 'Signing in...'
-                      : 'Creating Account...'
-                    : activeTab === 'login'
-                    ? 'Sign In'
-                    : 'Create Account'
-                }
+                label={isLoading || status === 'loading' ? 'Signing in...' : 'Sign In'}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-all duration-200"
                 disabled={isLoading || status === 'loading'}
               />

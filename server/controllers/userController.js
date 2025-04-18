@@ -130,9 +130,6 @@ export const getNotificationsList = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    console.log('Today:', today);
-    console.log('Tomorrow:', tomorrow);
-    
     // Find tasks due today
     const tasksDueToday = await Task.find({
       user: userId,
@@ -143,8 +140,6 @@ export const getNotificationsList = async (req, res) => {
       status: { $ne: 'completed' },
       isTrashed: false
     }).select('title dueDate priority');
-    
-    console.log('Tasks due today:', tasksDueToday);
     
     // Create notifications for tasks due today
     const dueTodayNotifications = tasksDueToday.map(task => ({
@@ -162,12 +157,8 @@ export const getNotificationsList = async (req, res) => {
       read: false
     }).populate("task", "title");
     
-    console.log('Existing notifications:', existingNotifications);
-    
     // Combine existing notifications with due today notifications
     const allNotifications = [...existingNotifications, ...dueTodayNotifications];
-    
-    console.log('All notifications:', allNotifications);
     
     res.status(200).json(allNotifications);
   } catch (error) {

@@ -18,11 +18,6 @@ const notificationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Task'
   },
-  notiType: {
-    type: String,
-    enum: ['alert', 'message', 'dueToday'],
-    default: 'alert'
-  },
   createdAt: {
     type: Date,
     default: Date.now
