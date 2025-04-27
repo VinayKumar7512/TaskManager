@@ -1,18 +1,9 @@
 import React from "react";
 import {
-  MdDashboard,
-  MdOutlineAddTask,
-  MdOutlinePendingActions,
-  MdSettings,
-  MdTaskAlt,
-  MdOutlineCalendarToday,
-  MdOutlineDelete,
-  MdOutlineAnalytics,
-  MdOutlineCheckCircle,
-  MdOutlineAssignment,
-  MdOutlinePending,
   MdOutlineDashboard,
   MdOutlineTask,
+  MdOutlineAnalytics,
+  MdOutlineDelete,
   MdOutlinePerson
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
@@ -57,11 +48,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const sidebarLinks = user?.isAdmin ? linkData : linkData.slice(0, 5);
 
   const closeSidebar = () => {
-    dispatch(setOpenSidebar(false));
+    setSidebarOpen(false);
   };
 
   const NavLink = ({ el }) => {
-    // Check if the current path exactly matches the link path
     const isActive = location.pathname === el.link;
   
     return (
@@ -98,7 +88,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   return (
     <>
-      {/* Desktop Sidebar - Always visible on desktop, hidden on mobile */}
+      {/* Desktop Sidebar */}
       <div className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
           <div className="flex flex-col h-0 flex-1 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
@@ -127,27 +117,40 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         </div>
       </div>
 
-      {/* Mobile Sidebar - Only visible when sidebarOpen is true */}
+      {/* Mobile Sidebar */}
       <div
         className={clsx(
-          "md:hidden fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-lg z-50 transform transition-transform duration-300 ease-in-out",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "md:hidden fixed inset-0 z-40 flex",
+          sidebarOpen ? "visible" : "invisible"
         )}
       >
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Task Manager</h2>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4">
-            <nav className="space-y-2">
+        {/* Overlay */}
+        <div
+          className={clsx(
+            "fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity duration-300",
+            sidebarOpen ? "opacity-100" : "opacity-0"
+          )}
+          onClick={closeSidebar}
+        />
+
+        {/* Sidebar Panel */}
+        <div
+          className={clsx(
+            "relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-gray-900 transform transition-transform duration-300 ease-in-out",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+            <div className="flex items-center flex-shrink-0 px-4">
+              <h1 className="text-xl font-bold text-gray-800 dark:text-white">Task Manager</h1>
+            </div>
+            <nav className="mt-5 px-2 space-y-1">
               {sidebarLinks.map((link, index) => (
                 <NavLink key={index} el={link} />
               ))}
             </nav>
           </div>
-          
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex-shrink-0 flex border-t border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
                 {user?.name?.charAt(0) || 'U'}
@@ -160,14 +163,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           </div>
         </div>
       </div>
-      
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={closeSidebar}
-        />
-      )}
     </>
   );
 };

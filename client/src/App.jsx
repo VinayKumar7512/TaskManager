@@ -39,6 +39,12 @@ const Layout = ({ children }) => {
   const { user } = useSelector((state) => state.auth);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  // Close sidebar when route changes
+  const location = useLocation();
+  React.useEffect(() => {
+    setSidebarOpen(false);
+  }, [location]);
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-dark">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
