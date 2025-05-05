@@ -86,6 +86,18 @@ export const updateSubtaskStatus = createAsyncThunk(
   }
 );
 
+export const updateTaskStatus = createAsyncThunk(
+  'tasks/updateTaskStatus',
+  async ({ id, status }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${API_URL}/tasks/${id}/status`, { status }, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to update task status' });
+    }
+  }
+);
+
 const initialState = {
   tasks: [],
   status: 'idle',
@@ -112,7 +124,7 @@ const taskSlice = createSlice({
       })
       .addCase(fetchTasks.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.tasks = action.payload;
+        state.tasks = action.payload.data || [];
         state.error = null;
       })
       .addCase(fetchTasks.rejected, (state, action) => {
@@ -140,7 +152,7 @@ const taskSlice = createSlice({
       .addCase(deleteTask.fulfilled, (state, action) => {
         console.log('Task deletion response:', action.payload);
         // Remove the task from the list
-        state.tasks = state.tasks.filter(task => task._id !== action.payload.data.id);
+        state.tasks = state.tasks.filter(task => task._id !== action.payload);
       })
       // Add subtask
       .addCase(addSubtask.fulfilled, (state, action) => {
@@ -154,6 +166,13 @@ const taskSlice = createSlice({
         const index = state.tasks.findIndex(task => task._id === action.payload._id);
         if (index !== -1) {
           state.tasks[index] = action.payload;
+        }
+      })
+      // Update Task Status
+      .addCase(updateTaskStatus.fulfilled, (state, action) => {
+        const index = state.tasks.findIndex(task => task._id === action.payload.data._id);
+        if (index !== -1) {
+          state.tasks[index] = action.payload.data;
         }
       });
   },

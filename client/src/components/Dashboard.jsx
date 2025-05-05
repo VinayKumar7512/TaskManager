@@ -1,42 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchTasks } from '../redux/slices/taskSlice';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState(null);
-  const [recentTasks, setRecentTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const { token } = useAuth();
-
+  const dispatch = useDispatch();
+  const { tasks, status } = useSelector((state) => state.tasks);
+  
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    dispatch(fetchTasks());
+  }, [dispatch]);
 
-  const fetchDashboardData = async () => {
-    try {
-      const [statsResponse, tasksResponse] = await Promise.all([
-        axios.get('http://localhost:5000/api/tasks/stats', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get('http://localhost:5000/api/tasks?limit=5', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ]);
-
-      setStats(statsResponse.data.data);
-      setRecentTasks(tasksResponse.data.data);
-      setLoading(false);
-    } catch (err) {
-      setError('Failed to fetch dashboard data');
-      setLoading(false);
-    }
+  // Calculate statistics from tasks
+  const stats = {
+    total: tasks.length,
+    completed: tasks.filter(task => task.status === 'completed').length,
+    inProgress: tasks.filter(task => task.status === 'in-progress').length,
+    todo: tasks.filter(task => task.status === 'todo').length
   };
 
-  if (loading) return <div className="loading">Loading...</div>;
-  if (error) return <div className="error">{error}</div>;
+  // Get recent tasks (last 5)
+  const recentTasks = [...tasks]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+
+  if (status === 'loading') return <div className="loading">Loading...</div>;
+  if (status === 'failed') return <div className="error">Failed to load dashboard data</div>;
 
   return (
     <div className="dashboard-container">

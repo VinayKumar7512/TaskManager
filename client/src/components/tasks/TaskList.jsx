@@ -3,16 +3,15 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import moment from 'moment';
-import { MdEdit, MdDelete, MdCheckCircle, MdCancel } from 'react-icons/md';
+import { MdEdit, MdDelete, MdCheckCircle, MdPlayArrow, MdAdd } from 'react-icons/md';
 import { FaFilter } from 'react-icons/fa';
-import { deleteTask } from '../../redux/slices/taskSlice';
+import { deleteTask, updateTaskStatus, fetchTasks } from '../../redux/slices/taskSlice';
 
 const TaskList = () => {
   const { user } = useSelector((state) => state.auth);
+  const { tasks: reduxTasks, status } = useSelector((state) => state.tasks);
   const dispatch = useDispatch();
   
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
@@ -22,41 +21,8 @@ const TaskList = () => {
   const [showFilters, setShowFilters] = useState(false);
   
   useEffect(() => {
-    fetchTasks();
-  }, []);
-  
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      const response = await fetch('http://localhost:5001/api/tasks', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(errorData.message || 'Failed to fetch tasks');
-      }
-      
-      const data = await response.json();
-      setTasks(data.data || []);
-    } catch (err) {
-      console.error('Task list error:', err);
-      setError(err.message);
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchTasks());
+  }, [dispatch]);
   
   const handleDelete = async (taskId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) {
@@ -65,8 +31,7 @@ const TaskList = () => {
     
     try {
       await dispatch(deleteTask(taskId)).unwrap();
-      
-      setTasks(tasks.filter(task => task._id !== taskId));
+      dispatch(fetchTasks());
       toast.success('Task deleted successfully!');
     } catch (err) {
       console.error('Delete task error:', err);
@@ -76,38 +41,15 @@ const TaskList = () => {
   
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      const token = user?.token;
+      const result = await dispatch(updateTaskStatus({ id: taskId, status: newStatus })).unwrap();
       
-      if (!token) {
-        throw new Error('No authentication token found');
+      if (result.success) {
+        dispatch(fetchTasks());
+        toast.success('Task status updated successfully!');
       }
-      
-      const task = tasks.find(t => t._id === taskId);
-      
-      const response = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...task,
-          status: newStatus
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(errorData.message || 'Failed to update task status');
-      }
-      
-      const updatedTask = await response.json();
-      
-      setTasks(tasks.map(t => t._id === taskId ? updatedTask.data : t));
-      toast.success('Task status updated successfully!');
     } catch (err) {
       console.error('Update task status error:', err);
-      toast.error(err.message);
+      toast.error(err?.message || 'Failed to update task status');
     }
   };
   
@@ -119,7 +61,7 @@ const TaskList = () => {
     }));
   };
   
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = reduxTasks.filter(task => {
     // Filter by status
     if (filters.status !== 'all' && task.status !== filters.status) {
       return false;
@@ -141,174 +83,182 @@ const TaskList = () => {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'todo':
-        return 'bg-gray-200 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border border-gray-300';
       case 'in-progress':
-        return 'bg-blue-200 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border border-blue-300';
       case 'completed':
-        return 'bg-green-200 text-green-800';
+        return 'bg-green-100 text-green-800 border border-green-300';
       default:
-        return 'bg-gray-200 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border border-gray-300';
     }
   };
   
   const getPriorityBadgeClass = (priority) => {
     switch (priority) {
       case 'low':
-        return 'bg-green-200 text-green-800';
+        return 'bg-green-100 text-green-800 border border-green-300';
       case 'medium':
-        return 'bg-yellow-200 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
       case 'high':
-        return 'bg-red-200 text-red-800';
+        return 'bg-red-100 text-red-800 border border-red-300';
       default:
-        return 'bg-gray-200 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border border-gray-300';
     }
   };
   
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-xl">Loading tasks...</div>
+        <div className="text-xl text-gray-600">Loading tasks...</div>
       </div>
     );
   }
   
-  if (error) {
+  if (status === 'failed') {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-        {error}
+        Failed to load tasks. Please try again later.
       </div>
     );
   }
   
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">My Tasks</h2>
-        <Link 
-          to="/tasks/new" 
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Add New Task
-        </Link>
-      </div>
-      
-      <div className="mb-4">
-        <div className="flex items-center mb-4">
-          <input
-            type="text"
-            name="search"
-            placeholder="Search tasks..."
-            className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-grow mr-2"
-            value={filters.search}
-            onChange={handleFilterChange}
-          />
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-800">Tasks</h2>
+          <p className="text-gray-500 mt-1">Manage your tasks and track progress</p>
+        </div>
+        <div className="flex gap-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded flex items-center"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
           >
-            <FaFilter className="mr-2" />
-            Filters
+            <FaFilter className="text-gray-500" />
+            <span>Filters</span>
           </button>
+          <Link
+            to="/tasks/new"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <MdAdd size={20} />
+            <span>New Task</span>
+          </Link>
         </div>
-        
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-100 rounded">
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
-                Status
-              </label>
-              <select
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="status"
-                name="status"
-                value={filters.status}
-                onChange={handleFilterChange}
-              >
-                <option value="all">All Statuses</option>
-                <option value="todo">To Do</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="priority">
-                Priority
-              </label>
-              <select
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                id="priority"
-                name="priority"
-                value={filters.priority}
-                onChange={handleFilterChange}
-              >
-                <option value="all">All Priorities</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-          </div>
-        )}
       </div>
       
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="status">
+              Status
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              id="status"
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+            >
+              <option value="all">All Statuses</option>
+              <option value="todo">To Do</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="priority">
+              Priority
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              id="priority"
+              name="priority"
+              value={filters.priority}
+              onChange={handleFilterChange}
+            >
+              <option value="all">All Priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="search">
+              Search
+            </label>
+            <input
+              type="text"
+              id="search"
+              name="search"
+              placeholder="Search tasks..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={filters.search}
+              onChange={handleFilterChange}
+            />
+          </div>
+        </div>
+      )}
+      
       {filteredTasks.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
           <p className="text-gray-500 text-lg">No tasks found. Create a new task to get started!</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
-            <thead className="bg-gray-100">
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="py-3 px-4 text-left">Title</th>
-                <th className="py-3 px-4 text-left">Status</th>
-                <th className="py-3 px-4 text-left">Priority</th>
-                <th className="py-3 px-4 text-left">Due Date</th>
-                <th className="py-3 px-4 text-left">Created</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {filteredTasks.map(task => (
-                <tr key={task._id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <div className="font-medium">{task.title}</div>
+                <tr key={task._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-gray-900">{task.title}</div>
                     {task.description && (
-                      <div className="text-sm text-gray-500 truncate max-w-xs">
+                      <div className="text-sm text-gray-500 mt-1 line-clamp-2">
                         {task.description}
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(task.status)}`}>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(task.status)}`}>
                       {task.status === 'in-progress' ? 'In Progress' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getPriorityBadgeClass(task.priority)}`}>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeClass(task.priority)}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="px-6 py-4">
                     {task.dueDate ? (
-                      <span className={new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-500' : ''}>
+                      <span className={`text-sm ${new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-600' : 'text-gray-600'}`}>
                         {moment(task.dueDate).format('MMM D, YYYY')}
                       </span>
                     ) : (
-                      <span className="text-gray-400">No due date</span>
+                      <span className="text-sm text-gray-400">No due date</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="px-6 py-4">
                     <span className="text-sm text-gray-500">
                       {moment(task.createdAt).fromNow()}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex justify-center space-x-2">
+                  <td className="px-6 py-4">
+                    <div className="flex justify-center space-x-3">
                       <Link
                         to={`/tasks/edit/${task._id}`}
-                        className="text-blue-500 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-800 transition-colors"
                         title="Edit"
                       >
                         <MdEdit size={20} />
@@ -317,7 +267,7 @@ const TaskList = () => {
                       {task.status !== 'completed' && (
                         <button
                           onClick={() => handleStatusChange(task._id, 'completed')}
-                          className="text-green-500 hover:text-green-700"
+                          className="text-green-600 hover:text-green-800 transition-colors"
                           title="Mark as completed"
                         >
                           <MdCheckCircle size={20} />
@@ -327,16 +277,16 @@ const TaskList = () => {
                       {task.status === 'todo' && (
                         <button
                           onClick={() => handleStatusChange(task._id, 'in-progress')}
-                          className="text-yellow-500 hover:text-yellow-700"
+                          className="text-yellow-600 hover:text-yellow-800 transition-colors"
                           title="Start task"
                         >
-                          <FaFilter size={20} />
+                          <MdPlayArrow size={20} />
                         </button>
                       )}
                       
                       <button
                         onClick={() => handleDelete(task._id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-600 hover:text-red-800 transition-colors"
                         title="Delete"
                       >
                         <MdDelete size={20} />
